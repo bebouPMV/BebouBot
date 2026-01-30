@@ -25,26 +25,26 @@ function findRole(guild, roleName) {
   return guild.roles.cache.find(r => r.name === roleName) || null;
 }
 
-async function dmAskPassword(user) {
-  await user.send(
-    "🔐 **How to Access**\n\n" +
-    "Welcome to **BebouPMV** 💜.\n\n" +
-    "To unlock the server channels, please read the rules then send me here the **access password for this month**.\n\n" +
-    "If your password is valid, your access will be granted automatically."
-  );
-}
+// async function dmAskPassword(user) {
+//   await user.send(
+//     "🔐 **How to Access**\n\n" +
+//     "Welcome to **BebouPMV** 💜.\n\n" +
+//     "To unlock the server channels, please read the rules then send me here the **access password for this month**.\n\n" +
+//     "If your password is valid, your access will be granted automatically."
+//   );
+// }
 
 client.once("ready", () => {
   console.log(`🤖 Bot connected : ${client.user.tag}`);
 });
 
-client.on("guildMemberAdd", async (member) => {
-  try {
-    await dmAskPassword(member.user);
-  } catch {
-    console.log(`❌ DM close for ${member.user.tag}`);
-  }
-});
+// client.on("guildMemberAdd", async (member) => {
+//   try {
+//     await dmAskPassword(member.user);
+//   } catch {
+//     console.log(`❌ DM close for ${member.user.tag}`);
+//   }
+// });
 
 // 2️⃣ messages handle (commande reset + DM password)
 client.on("messageCreate", async (message) => {
@@ -98,7 +98,7 @@ client.on("messageCreate", async (message) => {
             await member.roles.remove(r.role);
           }
         }
-        await dmAskPassword(member.user);
+        // await dmAskPassword(member.user);
       } catch {
         console.log(`❌ error during reset/DM ${member.user.tag}`);
       }
@@ -122,20 +122,7 @@ if (!message.guild) {
 
   const input = message.content.trim();
   const tiers = getTierConfig();
-
-  // Diagnostic safe: on log seulement des infos non sensibles
-  console.log("[DM] user=", message.author.id, "inputLen=", input.length,
-    "tiersConfigured=", tiers.map(t => ({ tier: t.tier, passLen: (t.pass || "").length, role: t.roleName }))
-  );
-
-  if (tiers.length === 0 || tiers.some(t => !t.pass || !t.roleName)) {
-  await message.author.send("⚠️ Access system is temporarily misconfigured. Please contact the admin.");
-  return;
-}
-
-const matched = tiers.find(t => t.pass === input);
-
-
+  const matched = tiers.find(t => t.pass === input);
 
   if (!matched) {
     await message.author.send("❌ Wrong password.");
