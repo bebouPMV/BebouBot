@@ -5,11 +5,11 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,      // utile pour !reset
-    GatewayIntentBits.DirectMessages,     // DM
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent
   ],
-  partials: [Partials.Channel, Partials.Message, Partials.User] // ✅ important
+  partials: [Partials.Channel, Partials.Message, Partials.User]
 });
 
 
@@ -27,76 +27,72 @@ function findRole(guild, roleName) {
 
 async function dmAskPassword(user) {
   await user.send(
-    "🔐 **Accès abonnés**\n\n" +
-    "Envoie-moi ton **mot de passe** pour déverrouiller ton tier.\n" +
-    "Tu peux coller le code ici directement."
+    "🔐 **How to Access**\n\n" +
+    "Welcome to **BebouPMV** 💜.\n\n" +
+    "To unlock the server channels, please send me here the **access password for this month**.\n\n" +
+    "If your password is valid, your access will be granted automatically."
   );
 }
 
 client.once("ready", () => {
-  console.log(`🤖 Bot connecté : ${client.user.tag}`);
+  console.log(`🤖 Bot connected : ${client.user.tag}`);
 });
 
-// 1️⃣ DM automatique à l'arrivée
 client.on("guildMemberAdd", async (member) => {
   try {
     await dmAskPassword(member.user);
   } catch {
-    console.log(`❌ DM fermé pour ${member.user.tag}`);
+    console.log(`❌ DM close for ${member.user.tag}`);
   }
 });
 
-// 2️⃣ Gestion messages (commande reset + DM password)
+// 2️⃣ messages handle (commande reset + DM password)
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
   // ====== COMMANDE ADMIN: !reset ======
   if (message.guild && message.content.trim().startsWith("!reset")) {
     if (!message.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
-      message.channel.send("❌ Tu n'as pas la permission d'utiliser cette commande.");
+      message.channel.send("❌ You don't have the permision to use this command.");
       return;
     }
 
     const guild = message.guild;
     const tiers = getTierConfig();
 
-    // Option: !reset TIER2 (reset un seul tier)
     const parts = message.content.trim().split(/\s+/);
-    const onlyTier = parts[1]?.toUpperCase(); // ex: TIER2
+    const onlyTier = parts[1]?.toUpperCase(); 
 
-    await guild.members.fetch(); // important: cache complet
+    await guild.members.fetch(); // important: get all cache
 
     const targetTiers = onlyTier ? tiers.filter(t => t.tier === onlyTier) : tiers;
     if (targetTiers.length === 0) {
-      message.channel.send("⚠️ Aucun tier trouvé (utilise: !reset ou !reset TIER1/TIER2/TIER3).");
+      message.channel.send("⚠️ no Tier find.");
       return;
     }
 
-    // Collecte des membres à reset (union des rôles)
     const roles = targetTiers
       .map(t => ({ ...t, role: findRole(guild, t.roleName) }))
       .filter(t => t.role);
 
     if (roles.length === 0) {
-      message.channel.send("⚠️ Rôles introuvables. Vérifie les noms ROLE_TIER1/2/3 dans .env");
+      message.channel.send("⚠️ tag not find in .env file");
       return;
     }
 
-    // Comptage total (sans doublons)
     const memberIds = new Set();
     for (const r of roles) {
       for (const m of r.role.members.values()) memberIds.add(m.id);
     }
 
-    message.channel.send(`🔄 Reset en cours (${memberIds.size} utilisateurs)...`);
+    message.channel.send(`🔄 Reset of (${memberIds.size} utilisateurs)...`);
 
-    // Reset : retirer les rôles + DM
+    // Reset : remove tag + DM
     for (const memberId of memberIds) {
       const member = await guild.members.fetch(memberId).catch(() => null);
       if (!member) continue;
 
       try {
-        // retire uniquement les rôles ciblés
         for (const r of roles) {
           if (r.role && member.roles.cache.has(r.role.id)) {
             await member.roles.remove(r.role);
@@ -104,23 +100,23 @@ client.on("messageCreate", async (message) => {
         }
         await dmAskPassword(member.user);
       } catch {
-        console.log(`❌ Impossible de reset/DM ${member.user.tag}`);
+        console.log(`❌ error during reset/DM ${member.user.tag}`);
       }
     }
 
-    message.channel.send("✅ Reset terminé.");
+    message.channel.send("✅ Reset finish.");
     return;
   }
 
-// ====== TRAITEMENT DM ======
+// ====== DM part ======
 if (!message.guild) {
-  console.log("DM reçu de", message.author.tag, "| contenu:", message.content);
+  console.log("DM from ", message.author.tag, "| containt:", message.content);
 
   const guild = await client.guilds.fetch(process.env.GUILD_ID);
   const member = await guild.members.fetch(message.author.id).catch(() => null);
 
   if (!member) {
-    await message.author.send("❌ Tu n'es pas sur le serveur.");
+    await message.author.send("❌ Your not on the server.");
     return;
   }
 
@@ -129,13 +125,13 @@ if (!message.guild) {
   const matched = tiers.find(t => t.pass === input);
 
   if (!matched) {
-    await message.author.send("❌ Mot de passe incorrect.");
+    await message.author.send("❌ Wrong password.");
     return;
   }
 
   const role = findRole(guild, matched.roleName);
   if (!role) {
-    await message.author.send("⚠️ Rôle introuvable côté serveur. Contacte l’admin.");
+    await message.author.send("⚠️ Tag not found, please DM an admin.");
     return;
   }
 
@@ -154,8 +150,8 @@ if (!message.guild) {
 
     await message.author.send(`✅ Accès accordé (${matched.tier}). Bienvenue.`);
   } catch (e) {
-    console.log("Erreur attribution role:", e);
-    await message.author.send("❌ Impossible d’attribuer le rôle (permissions?).");
+    console.log("error of tag attribution:", e);
+    await message.author.send("❌ error of tag attributions.");
   }
 
   return;
